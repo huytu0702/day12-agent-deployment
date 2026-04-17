@@ -1,116 +1,41 @@
-# Day 12 — Deployment: Đưa Agent Lên Cloud
+# Lab 12 - Complete Production Agent
 
-> **AICB-P1 · VinUniversity 2026**  
-> Repository thực hành đi kèm bài giảng Day 12.  
-> Mỗi phần có ví dụ **cơ bản** (hiểu concept) và **chuyên sâu** (production-ready).
+This repository snapshot is centered on the final part I completed: `06-lab-complete`.
+It contains the production-ready FastAPI agent with Redis-backed state, Docker packaging, local load balancing, and cloud deployment config.
 
----
+## What is included
 
-## Cấu Trúc Project
+- `app/main.py`: FastAPI app with `/health`, `/ready`, `/ask`, `/history/{user_id}`, `/usage/{user_id}`
+- `app/auth.py`: API key authentication via `X-API-Key`
+- `app/rate_limiter.py`: Redis sliding-window rate limit at `10 req/min/user`
+- `app/cost_guard.py`: Redis monthly budget guard at `$10/month/user`
+- `app/config.py`: environment-driven settings for local and production runs
+- `check_production_ready.py`: automated readiness checks for the final submission
+- `docker-compose.yml`: local stack with `agent + redis + nginx`
+- `Dockerfile` and `nginx.conf`: multi-stage image, non-root runtime, healthcheck, reverse proxy
+- `.env.example` and `utils/mock_llm.py`: local configuration template and offline mock LLM
+- `railway.toml` and `render.yaml`: cloud deployment config for Railway and Render
 
-```
-day12_ha-tang-cloud_va_deployment/
-├── 01-localhost-vs-production/     # Section 1: Dev ≠ Production
-│   ├── develop/                      #   Agent "đúng kiểu localhost"
-│   └── production/                   #   12-Factor compliant agent
-│
-├── 02-docker/                      # Section 2: Containerization
-│   ├── develop/                      #   Dockerfile đơn giản
-│   └── production/                   #   Multi-stage + Docker Compose stack
-│
-├── 03-cloud-deployment/            # Section 3: Cloud Options
-│   ├── railway/                    #   Deploy Railway (< 5 phút)
-│   ├── render/                     #   Deploy Render + render.yaml
-│   └── production-cloud-run/         #   GCP Cloud Run + CI/CD
-│
-├── 04-api-gateway/                 # Section 4: Security
-│   ├── develop/                      #   API Key authentication
-│   └── production/                   #   JWT + Rate Limiting + Cost Guard
-│
-├── 05-scaling-reliability/         # Section 5: Scale & Reliability
-│   ├── develop/                      #   Health check + graceful shutdown
-│   └── production/                   #   Stateless + Redis + Nginx LB
-│
-├── 06-lab-complete/                # Lab 12: Production-ready agent
-│   └── (full project kết hợp tất cả)
-│
-└── utils/                          # Mock LLM dùng chung (không cần API key)
-```
-
----
-
-## 🚀 Bắt Đầu Nhanh
-
-**Muốn thử ngay?** → [QUICK_START.md](QUICK_START.md) (5 phút)
-
-**Muốn học kỹ?** → [CODE_LAB.md](CODE_LAB.md) (3-4 giờ)
-
-## Final Submission Status
+## Final submission
 
 - Final project folder: [06-lab-complete](06-lab-complete/README.md)
 - Deployment notes: [DEPLOYMENT.md](DEPLOYMENT.md)
+- Mission answers: [MISSION_ANSWERS.md](MISSION_ANSWERS.md)
 - Public Railway URL: `https://day12-production-agent-production.up.railway.app`
 - Evidence files: [screenshots/day12-railway-root.png](screenshots/day12-railway-root.png), [screenshots/day12-railway-health.png](screenshots/day12-railway-health.png), [screenshots/day12-smoke-tests.md](screenshots/day12-smoke-tests.md)
 
-## Cách Học
-
-| Bước | Làm gì |
-|------|--------|
-| 0 | **[Khuyến nghị]** Đọc [QUICK_START.md](QUICK_START.md) để thử nhanh |
-| 1 | Đọc [CODE_LAB.md](CODE_LAB.md) để hiểu chi tiết |
-| 2 | Chạy ví dụ **basic** trước — hiểu concept |
-| 3 | So sánh với ví dụ **advanced** — thấy sự khác biệt |
-| 4 | Tự làm Lab 06 từ đầu trước khi xem solution |
-| 5 | Tham khảo [QUICK_REFERENCE.md](QUICK_REFERENCE.md) khi cần |
-| 6 | Xem [TROUBLESHOOTING.md](TROUBLESHOOTING.md) khi gặp lỗi |
-
----
-
-## Yêu Cầu
+## Run locally
 
 ```bash
-python 3.11+
-docker & docker compose
+docker compose up --build -d
 ```
 
-Mỗi folder có `requirements.txt` riêng. Không cần API key thật — các ví dụ dùng **mock LLM** để chạy offline.
+Traffic goes through `nginx` on `http://localhost:8000`.
 
----
+## Production readiness check
 
-## Sections
+```bash
+python check_production_ready.py
+```
 
-| # | Folder | Concept chính |
-|---|--------|--------------|
-| 1 | `01-localhost-vs-production` | Dev/prod gap, 12-factor, secrets |
-| 2 | `02-docker` | Dockerfile, multi-stage, docker-compose |
-| 3 | `03-cloud-deployment` | Railway, Render, Cloud Run |
-| 4 | `04-api-gateway` | Auth, rate limiting, cost protection |
-| 5 | `05-scaling-reliability` | Health check, stateless, rolling deploy |
-| 6 | `06-lab-complete` | **Full production agent** |
-
----
-
-## 📚 Lab Materials
-
-Chúng tôi đã chuẩn bị đầy đủ tài liệu hướng dẫn:
-
-### Cho Sinh Viên
-
-| Tài liệu | Mô tả | Thời gian |
-|----------|-------|-----------|
-| **[CODE_LAB.md](CODE_LAB.md)** | Hướng dẫn lab chi tiết từng bước | 3-4 giờ |
-| **[QUICK_REFERENCE.md](QUICK_REFERENCE.md)** | Cheat sheet các lệnh và patterns | Tra cứu |
-| **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)** | Giải quyết lỗi thường gặp | Khi cần |
-
-### Cho Giảng Viên
-
-| Tài liệu | Mô tả |
-|----------|-------|
-| **[INSTRUCTOR_GUIDE.md](INSTRUCTOR_GUIDE.md)** | Hướng dẫn chấm điểm và đánh giá |
-
-### Cách Sử Dụng
-
-1. **Trước lab:** Đọc [CODE_LAB.md](CODE_LAB.md) để hiểu tổng quan
-2. **Trong lab:** Làm theo từng Part, tham khảo [QUICK_REFERENCE.md](QUICK_REFERENCE.md)
-3. **Gặp lỗi:** Xem [TROUBLESHOOTING.md](TROUBLESHOOTING.md)
-4. **Sau lab:** Nộp Part 6 Final Project để chấm điểm
+Expected result: `20/20 checks passed`.
