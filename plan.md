@@ -72,8 +72,10 @@ Muc tieu: tao `MISSION_ANSWERS.md`.
 - Ghi lai output test vao `MISSION_ANSWERS.md`.
 
 5. Part 5:
-- Chay va hieu health check, readiness, graceful shutdown, stateless design.
-- Ghi note implementation va test results vao `MISSION_ANSWERS.md`.
+- Ghi ro baseline issue cua sample `05-scaling-reliability`: stack mau tham chieu `05-scaling-reliability/advanced/Dockerfile` bi thieu, nen khong verify end-to-end duoc theo nguyen trang.
+- Bo sung `05-scaling-reliability/advanced/Dockerfile` va chinh stack Docker cua Part 5 de hoan tat phan verify reliability.
+- Chay va ghi lai ket qua `health`, `ready`, `graceful shutdown`, `stateless design`, `load balancing`.
+- Trong `MISSION_ANSWERS.md` phai noi ro toi da bo sung `Dockerfile` cho `05-scaling-reliability` va da dung stack Docker nay de kiem chung Part 5.
 
 Chi can nop dap an ro rang, co test result va giai thich ngan gon. Khong can viet qua dai.
 
@@ -175,6 +177,7 @@ Can tao them o root repo:
 1. `MISSION_ANSWERS.md`
 - Tra loi day du Part 1-5
 - Co test results, image size, public URL, ghi chu implementation
+- Rieng Part 5 phai neu ro baseline issue cua sample `05-scaling-reliability` va viec toi da bo sung `Dockerfile`/stack Docker de verify end-to-end
 
 2. `DEPLOYMENT.md`
 - Public URL

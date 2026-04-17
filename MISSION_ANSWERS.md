@@ -273,54 +273,91 @@ Approach đúng để làm production:
 
 ## Part 5: Scaling & Reliability
 
+Part này tôi làm và kiểm chứng trong đúng thư mục `05-scaling-reliability/`.
+
+Baseline issue ban đầu của sample là `05-scaling-reliability/production/docker-compose.yml` tham chiếu `05-scaling-reliability/advanced/Dockerfile`, nhưng file này chưa tồn tại nên stack không chạy end-to-end được theo nguyên trạng. Để lấy kết quả thực tế, tôi đã bổ sung `05-scaling-reliability/advanced/Dockerfile` và bỏ dependency vào `.env.local` trong compose vì các biến môi trường cần thiết đã có sẵn trong service definition.
+
 ### Exercise 5.1: Health checks
-Test thực tế với `05-scaling-reliability/develop/app.py`:
+Lệnh chạy thực tế:
+
+```bash
+cd 05-scaling-reliability/production
+docker compose up --build -d --scale agent=3
+docker compose ps
+```
+
+Kết quả container:
 
 ```text
-HEALTH
-{"status":"degraded","uptime_seconds":3.0,"version":"1.0.0","environment":"development","timestamp":"2026-04-17T07:02:01.813900+00:00","checks":{"memory":{"status":"degraded","used_percent":93.3}}}
+production-agent-1   Up (healthy)
+production-agent-2   Up (healthy)
+production-agent-3   Up (healthy)
+production-nginx-1   Up   0.0.0.0:8080->80/tcp
+production-redis-1   Up (healthy)
+```
+
+Test health/readiness thực tế qua `nginx` ở `http://localhost:8080`:
+
+```text
+GET /health
+{"status":"ok","instance_id":"instance-69c647","uptime_seconds":9.7,"storage":"redis","redis_connected":true}
 HTTP_STATUS:200
 
-READY
-{"ready":true,"in_flight_requests":1}
+GET /ready
+{"ready":true,"instance":"instance-927127"}
 HTTP_STATUS:200
 ```
 
 Nhận xét:
 - `/health` trả `200`, đúng vai trò liveness probe.
-- `/ready` trả `200`, chứng tỏ app sẵn sàng nhận traffic.
-- `health` có thể trả trạng thái `degraded` nhưng vẫn sống, đây là cách biểu diễn hợp lý.
+- `/ready` trả `200`, chứng tỏ app sẵn sàng nhận traffic sau khi Redis đã healthy.
+- Hai request có thể đi vào hai instance khác nhau qua `nginx`, đây là hành vi bình thường khi stack đã scale.
 
 ### Exercise 5.2: Graceful shutdown
-Code đã có các thành phần đúng hướng:
-- `lifespan()` set `_is_ready = False` khi shutdown.
-- Chờ `_in_flight_requests` về 0 hoặc timeout 30 giây.
-- Bắt `SIGTERM` và `SIGINT`.
-- `uvicorn.run(... timeout_graceful_shutdown=30)`.
+Kiểm tra thực tế:
 
-Lưu ý:
-- Tôi chưa xác minh end-to-end graceful shutdown trên Windows shell này, vì cơ chế terminate process tại đây không mô phỏng chuẩn tín hiệu container như Linux/Kubernetes.
+```bash
+docker compose stop agent
+docker compose logs agent --tail 100
+```
+
+Log thực tế:
+
+```text
+agent-3  | INFO:     Shutting down
+agent-1  | INFO:     Shutting down
+agent-3  | INFO:     Waiting for application shutdown.
+agent-1  | INFO:     Waiting for application shutdown.
+agent-1  | INFO:app:Instance instance-3ed5a6 shutting down
+agent-1  | INFO:     Application shutdown complete.
+agent-3  | INFO:app:Instance instance-69c647 shutting down
+agent-3  | INFO:     Application shutdown complete.
+agent-2  | INFO:     Shutting down
+agent-2  | INFO:     Waiting for application shutdown.
+agent-2  | INFO:app:Instance instance-927127 shutting down
+agent-2  | INFO:     Application shutdown complete.
+```
+
+Kết luận:
+- Uvicorn nhận tín hiệu stop từ Docker và đi qua lifecycle shutdown đầy đủ.
+- `lifespan()` của app được gọi thật, không chỉ là phân tích code tĩnh.
+- Với Part 5 sample này, bằng chứng graceful shutdown phù hợp nhất là log `Shutting down` -> `Waiting for application shutdown` -> `Application shutdown complete`.
 
 ### Exercise 5.3: Stateless design
-`05-scaling-reliability/production/app.py` dùng Redis nếu kết nối được:
+`05-scaling-reliability/production/app.py` dùng Redis để lưu session/history qua:
 - `save_session()`
 - `load_session()`
 - `append_to_history()`
 
-Nếu Redis không có, code fallback sang `_memory_store`, nghĩa là:
-- app vẫn chạy demo được,
-- nhưng không còn stateless thật sự.
-
-Test local không có Redis:
+Test thực tế khi stack Docker đã có Redis:
 
 ```text
-{"session_id":"c0a71c51-0344-4948-aa64-7347ec141661","question":"What is Docker?","served_by":"instance-a04ce2","storage":"in-memory"}
-{"session_id":"c0a71c51-0344-4948-aa64-7347ec141661","question":"Why containers?","served_by":"instance-a04ce2","storage":"in-memory"}
+{"status":"ok","instance_id":"instance-69c647","uptime_seconds":9.7,"storage":"redis","redis_connected":true}
 ```
 
 Kết luận:
-- Logic session/history hoạt động.
-- Nhưng local test hiện đang chạy ở chế độ `in-memory`, chưa chứng minh được stateless qua nhiều instance.
+- Sample này vẫn có fallback `in-memory` nếu thiếu Redis.
+- Tuy nhiên kết quả chạy Docker thực tế của tôi là `storage: "redis"` và `redis_connected: true`, nên phần verify Part 5 đã ở chế độ stateless đúng nghĩa.
 
 ### Exercise 5.4: Load balancing
 `05-scaling-reliability/production/nginx.conf` khai báo:
@@ -329,32 +366,51 @@ Kết luận:
 - header `X-Served-By`
 - `proxy_next_upstream error timeout http_503`
 
-Ý nghĩa:
-- Nginx sẽ phân phối request sang các agent instance.
-- Nếu một instance lỗi hoặc timeout, request có thể chuyển sang upstream khác.
-
-### Exercise 5.5: Test stateless
-`test_stateless.py` được viết đúng ý tưởng:
-1. tạo session,
-2. gửi nhiều request liên tiếp,
-3. theo dõi `served_by`,
-4. kiểm tra history còn nguyên.
-
-Tuy nhiên stack production hiện chưa chạy được as-is vì:
+Kết quả thực tế từ `python test_stateless.py`:
 
 ```text
-05-scaling-reliability/production/docker-compose.yml
-dockerfile: 05-scaling-reliability/advanced/Dockerfile
+Instances used: {'instance-69c647', 'instance-927127', 'instance-3ed5a6'}
+✅ All requests served despite different instances!
 ```
 
-File `05-scaling-reliability/advanced/Dockerfile` hiện không tồn tại.
+Kết luận:
+- `nginx` đã phân phối request qua ít nhất 3 instance khác nhau.
+- Load balancing ở Part 5 không còn là nhận xét trên config; nó đã được chứng minh bằng output thật của runtime.
+
+### Exercise 5.5: Test stateless
+Script `test_stateless.py` đã chạy thành công sau khi tôi bổ sung Dockerfile cho Part 5.
+
+Output thực tế:
+
+```text
+Session ID: 654ddb57-4efc-460f-a1e9-457560526825
+
+Request 1: [instance-3ed5a6]
+Request 2: [instance-69c647]
+Request 3: [instance-927127]
+Request 4: [instance-3ed5a6]
+Request 5: [instance-69c647]
+
+Total requests: 5
+Instances used: {'instance-69c647', 'instance-927127', 'instance-3ed5a6'}
+✅ All requests served despite different instances!
+
+--- Conversation History ---
+Total messages: 10
+✅ Session history preserved across all instances via Redis!
+```
+
+Kết luận:
+- Một session đi qua nhiều instance khác nhau nhưng history vẫn đủ 10 messages.
+- Đây là bằng chứng trực tiếp rằng state không nằm trong memory của từng container, mà đã được chia sẻ qua Redis.
+- Phần này bây giờ có kết quả thực tế, không còn dừng ở mức "sample thiếu Dockerfile" nữa.
 
 ### Implementation notes summary
-- Health/readiness: đã test được local.
-- Graceful shutdown: code đã có, cần verify lại trên môi trường container Linux.
-- Stateless design: đúng ý tưởng khi có Redis, nhưng sample hiện fallback về memory nếu thiếu Redis.
-- Load balancing: Nginx config đã có.
-- `test_stateless.py`: chưa chạy end-to-end được cho tới khi sửa docker-compose path.
+- Baseline issue của sample là thiếu `05-scaling-reliability/advanced/Dockerfile`, nên ban đầu Part 5 không chạy được end-to-end.
+- Tôi đã bổ sung `Dockerfile` cho `05-scaling-reliability` và bỏ dependency vào `.env.local` để stack Docker chạy được thật.
+- Health/readiness: đã test thực tế qua `nginx`, đều trả `200`.
+- Graceful shutdown: đã verify bằng log thật từ `docker compose stop agent`.
+- Stateless design + load balancing: đã verify bằng `test_stateless.py`, với 5 request đi qua 3 instance khác nhau và history vẫn đầy đủ trong Redis.
 
 ## Part 6: Final Project Update
 
