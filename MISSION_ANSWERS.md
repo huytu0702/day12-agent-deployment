@@ -1,5 +1,10 @@
 # Day 12 Lab - Mission Answers
 
+> **Student Name:** Nguyễn Huy Tú  
+> **Student ID:** 2A202600170  
+> **Date:** 17/04/2026  
+
+
 ## Part 1: Localhost vs Production
 
 ### Exercise 1.1: Anti-patterns found
@@ -12,7 +17,7 @@
 7. Bind vào `localhost` nên không nhận traffic từ ngoài container/cloud.
 8. Không có graceful shutdown hoặc lifecycle hooks.
 
-### Exercise 1.3: Comparison table
+### Exercise 1.2: Comparison table
 | Feature | Develop | Production | Why Important? |
 |---------|---------|------------|----------------|
 | Config | Hardcode trực tiếp trong `app.py` | Tập trung trong `config.py`, đọc từ env vars | Dễ đổi giữa local/staging/prod, không lộ secret |
@@ -351,10 +356,12 @@ File `05-scaling-reliability/advanced/Dockerfile` hiện không tồn tại.
 - Load balancing: Nginx config đã có.
 - `test_stateless.py`: chưa chạy end-to-end được cho tới khi sửa docker-compose path.
 
-## Final Project Update
+## Part 6: Final Project Update
 
 - Phiên bản sản phẩm cuối cùng đã hoàn thiện trong thư mục `06-lab-complete/`.
-- Các tính năng `rate limit`, `monthly budget` và `onversation history` đã được triển khai bằng Redis trong ứng dụng cuối cùng.
+- Tài liệu triển khai chi tiết: [DEPLOYMENT.md](DEPLOYMENT.md).
+- README của bản hoàn chỉnh: [06-lab-complete/README.md](06-lab-complete/README.md).
+- Các tính năng `rate limit`, `monthly budget` và `conversation history` đã được triển khai bằng Redis trong ứng dụng cuối cùng.
 - Kết quả kiểm tra production cục bộ: `20/20 checks passed`.
 - Smoke test evidence: [screenshots/day12-smoke-tests.md](screenshots/day12-smoke-tests.md).
 - URL triển khai công khai cuối cùng:
