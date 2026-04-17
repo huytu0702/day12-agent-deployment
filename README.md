@@ -24,18 +24,6 @@ It contains the production-ready FastAPI agent with Redis-backed state, Docker p
 - Public Railway URL: `https://day12-production-agent-production.up.railway.app`
 - Evidence files: [screenshots/day12-railway-root.png](screenshots/day12-railway-root.png), [screenshots/day12-railway-health.png](screenshots/day12-railway-health.png), [screenshots/day12-smoke-tests.md](screenshots/day12-smoke-tests.md)
 
-## Run locally
+## How to run
 
-```bash
-docker compose up --build -d
-```
-
-Traffic goes through `nginx` on `http://localhost:8000`.
-
-## Production readiness check
-
-```bash
-python check_production_ready.py
-```
-
-Expected result: `20/20 checks passed`.
+See the full run guide in [06-lab-complete/README.md](06-lab-complete/README.md).
