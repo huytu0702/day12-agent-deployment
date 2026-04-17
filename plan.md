@@ -133,8 +133,8 @@ Muc tieu: chay duoc local truoc khi deploy.
 - Image muc tieu `< 500 MB`
 
 2. Docker Compose:
-- Toi thieu co `agent` va `redis`
-- Tot hon neu bo sung `nginx` neu ban muon the hien phan load balancing ro hon
+- co `agent` va `redis`
+- bo sung `nginx` de the hien phan load balancing
 
 3. Test local can lam:
 - `docker compose up --build`
@@ -154,21 +154,13 @@ Muc tieu toi thieu: script nay pass hoan toan, sau do test tay them cho rate lim
 
 Muc tieu: co public URL hoat dong.
 
-Lua chon nhanh nhat:
-
-1. Railway:
+Railway:
 - `npm i -g @railway/cli`
 - `railway login`
 - `railway init`
 - set env vars
 - `railway up`
-- `railway domain`
-
-2. Render:
-- Push len GitHub
-- Connect repo trong Render
-- Dung `render.yaml`
-- Set env vars trong dashboard
+- `railway domain`  
 
 Sau khi deploy, phai test public URL:
 

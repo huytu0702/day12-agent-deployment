@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: ai-agent-production
+    name: day12-production-agent
     runtime: docker
     region: singapore
     plan: starter
@@ -10,14 +10,14 @@ services:
       - key: ENVIRONMENT
         value: production
       - key: APP_VERSION
-        value: "1.0.0"
-      - key: OPENAI_API_KEY
-        sync: false
+        value: "2.0.0"
+      - key: LOG_LEVEL
+        value: INFO
       - key: AGENT_API_KEY
-        generateValue: true
-      - key: JWT_SECRET
-        generateValue: true
-      - key: DAILY_BUDGET_USD
-        value: "5.0"
+        sync: false
+      - key: REDIS_URL
+        sync: false
       - key: RATE_LIMIT_PER_MINUTE
-        value: "20"
+        value: "10"
+      - key: MONTHLY_BUDGET_USD
+        value: "10.0"

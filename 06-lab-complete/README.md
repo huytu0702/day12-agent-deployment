@@ -1,100 +1,75 @@
-# Lab 12 — Complete Production Agent
+# Lab 12 - Complete Production Agent
 
-Kết hợp TẤT CẢ những gì đã học trong 1 project hoàn chỉnh.
+This folder contains the final Day 12 submission target: a production-ready FastAPI agent with Redis-backed state, Docker packaging, load-balanced local runtime, and Railway deployment config.
 
-## Checklist Deliverable
+## What is included
 
-- [x] Dockerfile (multi-stage, < 500 MB)
-- [x] docker-compose.yml (agent + redis)
-- [x] .dockerignore
-- [x] Health check endpoint (`GET /health`)
-- [x] Readiness endpoint (`GET /ready`)
-- [x] API Key authentication
-- [x] Rate limiting
-- [x] Cost guard
-- [x] Config từ environment variables
-- [x] Structured logging
-- [x] Graceful shutdown
-- [x] Public URL ready (Railway / Render config)
+- `app/main.py`: FastAPI app with `/health`, `/ready`, `/ask`, `/history/{user_id}`, `/usage/{user_id}`
+- `app/auth.py`: API key authentication via `X-API-Key`
+- `app/rate_limiter.py`: Redis sliding-window limit at `10 req/min/user`
+- `app/cost_guard.py`: Redis monthly budget guard at `$10/month/user`
+- `docker-compose.yml`: local stack with `agent + redis + nginx`
+- `Dockerfile`: multi-stage image, non-root runtime, healthcheck
+- `railway.toml` and `render.yaml`: cloud deployment config
 
----
+## Required environment variables
 
-## Cấu Trúc
-
-```
-06-lab-complete/
-├── app/
-│   ├── main.py         # Entry point — kết hợp tất cả
-│   ├── config.py       # 12-factor config
-│   ├── auth.py         # API Key + JWT
-│   ├── rate_limiter.py # Rate limiting
-│   └── cost_guard.py   # Budget protection
-├── Dockerfile          # Multi-stage, production-ready
-├── docker-compose.yml  # Full stack
-├── railway.toml        # Deploy Railway
-├── render.yaml         # Deploy Render
-├── .env.example        # Template
-├── .dockerignore
-└── requirements.txt
-```
-
----
-
-## Chạy Local
+Copy `.env.example` to `.env` for local work.
 
 ```bash
-# 1. Setup
-cp .env.example .env
-
-# 2. Chạy với Docker Compose
-docker compose up
-
-# 3. Test
-curl http://localhost/health
-
-# 4. Lấy API key từ .env, test endpoint
-API_KEY=$(grep AGENT_API_KEY .env | cut -d= -f2)
-curl -H "X-API-Key: $API_KEY" \
-     -X POST http://localhost/ask \
-     -H "Content-Type: application/json" \
-     -d '{"question": "What is deployment?"}'
+HOST=0.0.0.0
+PORT=8000
+ENVIRONMENT=development
+LOG_LEVEL=INFO
+REDIS_URL=redis://localhost:6379/0
+AGENT_API_KEY=replace-with-a-long-random-value
+RATE_LIMIT_PER_MINUTE=10
+MONTHLY_BUDGET_USD=10.0
+ALLOWED_ORIGINS=*
 ```
 
----
-
-## Deploy Railway (< 5 phút)
+## Run locally
 
 ```bash
-# Cài Railway CLI
-npm i -g @railway/cli
-
-# Login và deploy
-railway login
-railway init
-railway variables set OPENAI_API_KEY=sk-...
-railway variables set AGENT_API_KEY=your-secret-key
-railway up
-
-# Nhận public URL!
-railway domain
+docker compose up --build -d
 ```
 
----
+Traffic goes through `nginx` on `http://localhost:8000`.
 
-## Deploy Render
+### Smoke test
 
-1. Push repo lên GitHub
-2. Render Dashboard → New → Blueprint
-3. Connect repo → Render đọc `render.yaml`
-4. Set secrets: `OPENAI_API_KEY`, `AGENT_API_KEY`
-5. Deploy → Nhận URL!
+```bash
+curl http://localhost:8000/health
+curl http://localhost:8000/ready
 
----
+curl -X POST http://localhost:8000/ask \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: day12-local-dev-key" \
+  -d '{"user_id":"student-1","question":"What is deployment?"}'
+```
 
-## Kiểm Tra Production Readiness
+### Expected behavior
+
+- missing API key -> `401`
+- valid API key -> `200`
+- request 11 within one minute for the same `user_id` -> `429`
+- user whose monthly budget is exhausted -> `402`
+
+## Production readiness check
 
 ```bash
 python check_production_ready.py
 ```
 
-Script này kiểm tra tất cả items trong checklist và báo cáo những gì còn thiếu.
+Expected result: `20/20 checks passed`.
+
+## Railway deploy
+
+This repository has already been deployed once with Railway CLI using this folder as root.
+
+```bash
+railway up --detach --path-as-root .
+railway domain -s day12-production-agent
+```
+
+Current public URL is documented in the root [DEPLOYMENT.md](../DEPLOYMENT.md).

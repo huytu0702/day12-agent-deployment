@@ -45,6 +45,13 @@ day12_ha-tang-cloud_va_deployment/
 
 **Muốn học kỹ?** → [CODE_LAB.md](CODE_LAB.md) (3-4 giờ)
 
+## Final Submission Status
+
+- Final project folder: [06-lab-complete](06-lab-complete/README.md)
+- Deployment notes: [DEPLOYMENT.md](DEPLOYMENT.md)
+- Public Railway URL: `https://day12-production-agent-production.up.railway.app`
+- Evidence files: [screenshots/day12-railway-root.png](screenshots/day12-railway-root.png), [screenshots/day12-railway-health.png](screenshots/day12-railway-health.png), [screenshots/day12-smoke-tests.md](screenshots/day12-smoke-tests.md)
+
 ## Cách Học
 
 | Bước | Làm gì |

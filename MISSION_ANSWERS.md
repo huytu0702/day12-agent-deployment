@@ -44,10 +44,9 @@ docker build -f 02-docker/develop/Dockerfile -t my-agent-develop .
 - Image size thực tế:
 
 ```text
-my-agent-develop:latest = 424077676 bytes
+my-agent-develop:latest = 1.66GB
 ```
 
-- Tương đương khoảng `424.1 MB` (`404.4 MiB`).
 
 - Khi test runtime, endpoint `/ask` của bản develop nhận `question` dưới dạng query parameter, không phải JSON body:
 
@@ -62,9 +61,9 @@ Response:
 ```
 
 ### Exercise 2.3: Image size comparison
-- Develop: `424,077,676` bytes (`404.4 MiB`)
-- Production: `56,617,206` bytes (`54.0 MiB`)
-- Difference: giảm `367,460,470` bytes, tương đương `86.65%`
+- Develop: 1.66GB
+- Production: 236.44MB
+- Difference: giảm ~7 lần
 
 Lệnh build production đã chạy thành công:
 
@@ -189,7 +188,7 @@ Response mẫu từ `POST /ask`:
 | Extra managed services | không khai báo Redis trong cùng file mẫu | khai báo luôn cả Redis service trong `render.yaml` |
 
 ### Deployment status note
-- Public URL: `https://day12-cloud-deployment-lab-production.up.railway.app`
+- Public URL: `https://day12-cloud-deployment-lab-production.up.railway.app` (đã shutdown sau khi chạy để tiết kiệm resource cho Part 6)  
 - Deployment đã chạy thành công trên Railway.
 - Screenshot dashboard đã có trong repo: [screenshots/part3.png](screenshots/part3.png)
 
@@ -201,7 +200,7 @@ Response mẫu từ `POST /ask`:
 - Nếu sai key: trả `403`.
 - Rotate key bằng cách đổi giá trị environment variable `AGENT_API_KEY`.
 
-Test kết quả thực tế với `.venv`:
+Test kết quả thực tế :
 
 ```text
 NO_KEY
@@ -351,3 +350,22 @@ File `05-scaling-reliability/advanced/Dockerfile` hiện không tồn tại.
 - Stateless design: đúng ý tưởng khi có Redis, nhưng sample hiện fallback về memory nếu thiếu Redis.
 - Load balancing: Nginx config đã có.
 - `test_stateless.py`: chưa chạy end-to-end được cho tới khi sửa docker-compose path.
+
+## Final Project Update
+
+- Final production-ready project completed in `06-lab-complete/`.
+- Redis-backed `rate limit`, `monthly budget`, and `conversation history` are now implemented in the final app.
+- Local production checker result: `20/20 checks passed`.
+- Final public deployment URL:
+
+```text
+https://day12-production-agent-production.up.railway.app
+```
+
+- Public smoke test on `2026-04-17`:
+
+```text
+GET /health -> 200
+POST /ask (no key) -> 401
+POST /ask (with key) -> 200
+```
