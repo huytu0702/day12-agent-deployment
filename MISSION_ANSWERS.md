@@ -199,6 +199,39 @@ Response mẫu từ `POST /ask`:
 
 ## Part 4: API Security
 
+Part này tôi chạy local bằng `.venv` trong repo với lệnh:
+
+```bash
+cd 04-api-gateway/production
+..\..\.venv\Scripts\python.exe -m uvicorn app:app --host 0.0.0.0 --port 8040
+```
+
+### Bug fix đã thực hiện
+Tôi chỉ sửa 1 chỗ trong production sample:
+- File: `04-api-gateway/production/app.py`
+- Hàm: `security_headers()`
+- Vị trí sửa: thay `response.headers.pop("server", None)` bằng:
+
+```python
+if "server" in response.headers:
+    del response.headers["server"]
+```
+
+Kết quả trước và sau khi sửa:
+
+```text
+TRUOC_SUA
+GET /health      -> 500
+POST /auth/token -> 500
+AttributeError: 'MutableHeaders' object has no attribute 'pop'
+
+SAU_SUA
+GET /health      -> 200
+POST /auth/token -> 200
+POST /ask        -> 401 khi thiếu token
+POST /ask        -> 200 khi có JWT hợp lệ
+```
+
 ### Exercise 4.1: API key authentication
 - API key được check trong hàm `verify_api_key()` của `04-api-gateway/develop/app.py`.
 - Nếu thiếu key: trả `401`.
@@ -224,16 +257,24 @@ JWT flow trong `04-api-gateway/production/auth.py`:
 3. `create_token()` tạo JWT chứa `sub`, `role`, `iat`, `exp`.
 4. `verify_token()` decode token ở các request protected.
 
-Tuy nhiên, app production hiện đang lỗi middleware nên request HTTP thực tế bị `500` trước khi tới logic auth:
+Trước khi sửa middleware ở `04-api-gateway/production/app.py`, request HTTP thực tế bị `500` trước khi tới logic auth:
 
 ```text
 AttributeError: 'MutableHeaders' object has no attribute 'pop'
 ```
 
-Lỗi nằm ở:
+Sau khi sửa middleware, flow JWT chạy được end-to-end:
 
-```python
-response.headers.pop("server", None)
+```text
+GET /health -> 200
+
+POST /auth/token -> 200
+{"access_token":"<jwt>","token_type":"bearer","expires_in_minutes":60,...}
+
+POST /ask không có Authorization header -> 401
+
+POST /ask với JWT của teacher -> 200
+{"question":"What is Docker?","answer":"Container là cách đóng gói app để chạy ở mọi nơi. Build once, run anywhere!","usage":{"requests_remaining":99,"budget_remaining_usd":1.9E-05}}
 ```
 
 ### Exercise 4.3: Rate limiting
@@ -241,15 +282,27 @@ response.headers.pop("server", None)
 - User limit: `10 requests / 60 giây`.
 - Admin bypass bằng cách dùng `rate_limiter_admin` thay vì `rate_limiter_user`, hiện đang cho `100 requests / 60 giây`.
 
-Do middleware của app production đang lỗi, tôi test trực tiếp module:
+Sau khi sửa middleware, tôi restart app để reset in-memory window rồi test lại HTTP thật với user `student`:
 
 ```text
-RATE 1:ok:9 | 2:ok:8 | 3:ok:7 | 4:ok:6 | 5:ok:5 | 6:ok:4 | 7:ok:3 | 8:ok:2 | 9:ok:1 | 10:ok:0 | 11:err:429:{'error': 'Rate limit exceeded', 'limit': 10, 'window_seconds': 60, 'retry_after_seconds': 61}
+POST /auth/token -> 200
+POST /ask lần 1  -> 200
+POST /ask lần 2  -> 200
+POST /ask lần 3  -> 200
+POST /ask lần 4  -> 200
+POST /ask lần 5  -> 200
+POST /ask lần 6  -> 200
+POST /ask lần 7  -> 200
+POST /ask lần 8  -> 200
+POST /ask lần 9  -> 200
+POST /ask lần 10 -> 200
+POST /ask lần 11 -> 429
 ```
 
 Kết luận:
 - Request thứ 11 bị chặn đúng với `429`.
-- Rate limiting logic hoạt động, nhưng hiện mới là in-memory nên không scale qua nhiều instance.
+- Sau khi sửa middleware, rate limiting không còn chỉ là test module mà đã verify được qua HTTP thật.
+- Tuy nhiên sample này vẫn là in-memory nên chưa scale qua nhiều instance.
 
 ### Exercise 4.4: Cost guard implementation
 Hiện trạng của sample `cost_guard.py`:
@@ -258,7 +311,16 @@ Hiện trạng của sample `cost_guard.py`:
 - budget mặc định `$1/day/user`,
 - chưa đúng yêu cầu cuối bài là `$10/month/user` với Redis.
 
-Test trực tiếp module:
+Kết quả usage thực tế sau khi gọi API:
+
+```text
+GET /me/usage -> 200
+{"user_id":"student","date":"2026-04-17","requests":10,"input_tokens":40,"output_tokens":304,"cost_usd":0.000188,"budget_usd":1.0,"budget_remaining_usd":0.999812,"budget_used_pct":0.0}
+```
+
+Điều này chứng minh accounting đang chạy thật trong app production sample sau khi sửa middleware.
+
+Để chứng minh nhánh block budget, tôi vẫn test trực tiếp module vì với mock pricing hiện tại rất khó đốt hết `$1/day` chỉ bằng vài request ngắn:
 
 ```text
 BUDGET 402 {'error': 'Daily budget exceeded', 'used_usd': 1.5, 'budget_usd': 1.0, 'resets_at': 'midnight UTC'}
