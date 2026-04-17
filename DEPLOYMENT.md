@@ -68,3 +68,7 @@ curl -X POST https://day12-production-agent-production.up.railway.app/ask \
 - Root endpoint response: [day12-railway-root.png](screenshots/day12-railway-root.png)
 - Health endpoint response: [day12-railway-health.png](screenshots/day12-railway-health.png)
 - Test evidence summary: [day12-smoke-tests.md](screenshots/day12-smoke-tests.md)
+
+## Final Project Update
+
+- Smoke test evidence: [screenshots/day12-smoke-tests.md](screenshots/day12-smoke-tests.md)

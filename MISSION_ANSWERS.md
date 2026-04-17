@@ -353,19 +353,20 @@ File `05-scaling-reliability/advanced/Dockerfile` hiện không tồn tại.
 
 ## Final Project Update
 
-- Final production-ready project completed in `06-lab-complete/`.
-- Redis-backed `rate limit`, `monthly budget`, and `conversation history` are now implemented in the final app.
-- Local production checker result: `20/20 checks passed`.
-- Final public deployment URL:
+- Phiên bản sản phẩm cuối cùng đã hoàn thiện trong thư mục `06-lab-complete/`.
+- Các tính năng `rate limit`, `monthly budget` và `onversation history` đã được triển khai bằng Redis trong ứng dụng cuối cùng.
+- Kết quả kiểm tra production cục bộ: `20/20 checks passed`.
+- Smoke test evidence: [screenshots/day12-smoke-tests.md](screenshots/day12-smoke-tests.md).
+- URL triển khai công khai cuối cùng:
 
 ```text
 https://day12-production-agent-production.up.railway.app
 ```
 
-- Public smoke test on `2026-04-17`:
+- Kiểm tra smoke test công khai vào ngày `2026-04-17`:
 
 ```text
 GET /health -> 200
-POST /ask (no key) -> 401
-POST /ask (with key) -> 200
+POST /ask (không có key) -> 401
+POST /ask (có key) -> 200
 ```
